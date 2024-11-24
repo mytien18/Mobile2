@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import React from 'react';
 import {
   StyleSheet,
@@ -12,11 +12,53 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import CartScreen from '../CartScreen';
+import { ThemedText } from '@/components/ThemedText';
+import { Link } from 'expo-router';
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  image: any; // Dùng kiểu any cho ảnh nếu không xác định cụ thể
+};
 
 // HomeScreen Component
 function HomeScreen() {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => {
+    
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch("https://fakestoreapi.com/products");
+        const data = await response.json();
+        setProducts(data); // Cập nhật state sản phẩm
+      } catch (error) {
+        console.error("Lỗi khi lấy sản phẩm:", error);
+        setError("Không thể lấy sản phẩm");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts(); // Gọi hàm fetch khi component được render
+    
+  }, []);
+
+  if (loading) {
+    return <Text>Đang tải...</Text>;
+  }
+
+  if (error) {
+    return <Text>{error}</Text>;
+  }
+  
   return (
     <ScrollView style={styles.container}>
+      
       {/* Thanh tìm kiếm */}
       <View style={styles.searchBar}>
         <TextInput style={styles.searchInput} placeholder="Tìm kiếm..." />
@@ -54,89 +96,97 @@ function HomeScreen() {
           {products.map((product, index) => (
             <TouchableOpacity key={index} style={styles.productCard}>
               <Image source={{ uri: product.image }} style={styles.productImage} />
-              <Text style={styles.productName}>{product.name}</Text>
+              <Text style={styles.productName}>{product.title}</Text>
               <Text style={styles.productPrice}>{product.price}đ</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
+      {products.map((product, index) => (
+  <TouchableOpacity
+    key={index}
+    style={styles.productCard}
+    onPress={() => navigation.navigate('Detail', { productId: product.id })} // Gọi hàm navigate
+  >
+    <Image source={{ uri: product.image }} style={styles.productImage} />
+    <Text style={styles.productName}>{product.title}</Text>
+    <Text style={styles.productPrice}>{product.price}đ</Text>
+  </TouchableOpacity>
+))}
     </ScrollView>
   );
 }
 
 // ProfileScreen Component
 function ProfileScreen() {
+  const user = {
+    name: "Nguyễn Văn A",
+    email: "nguyenvana@example.com",
+    profileImage: "https://example.com/profile.jpg", // Thay thế bằng URL ảnh đại diện thực tế
+  };
   return (
-    <View style={styles.centeredView}>
-      <Text>Trang cá nhân</Text>
+    <View style={styles.container}>
+      {/* Ảnh đại diện */}
+      <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
+      
+      {/* Thông tin người dùng */}
+      <Text style={styles.userName}>{user.name}</Text>
+      <Text style={styles.userEmail}>{user.email}</Text>
+
+      {/* Các nút chức năng */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button}>
+          <Ionicons name="settings-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Cài đặt</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button}>
+          <Ionicons name="log-out-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Đăng xuất</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 //detail component
 
-const Detail = () => {
-  const [quantity, setQuantity] = useState(1);
+const Detail = ({ route }) => {
+  const { productId } = route.params;
 
-  const product = {
-    id: 1,
-    name: "iPhone 12 Pro Max 128GB",
-    description:
-      "Mạnh mẽ, siêu nhanh với chip A14, RAM 6GB, mạng 5G tốc độ cao",
-    price: 23000000,
-    image:
-      "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/1/_/1_251_1.jpg",
-  };
+  const [product, setProduct] = useState(null);
 
-  const addToCart = () => {
-    Alert.alert(
-      "Đã thêm vào giỏ hàng",
-      `Bạn đã thêm ${quantity} sản phẩm vào giỏ hàng.`
-    );
-  };
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch(`https://fakestoreapi.com/products/${productId}`);
+        const data = await response.json();
+        setProduct(data);
+      } catch (error) {
+        console.error("Lỗi khi lấy sản phẩm:", error);
+      }
+    };
+    fetchProduct();
+  }, [productId]);
 
-  const increaseQuantity = () => {
-    setQuantity(quantity + 1);
-  };
+  if (!product) {
+    return <Text>Đang tải sản phẩm...</Text>;
+  }
 
-  const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
-  };
-
+  // Hiển thị thông tin sản phẩm
   return (
     <ScrollView style={styles.container}>
       <Image source={{ uri: product.image }} style={styles.productImage} />
       <View style={styles.productInfo}>
-        <Text style={styles.productName}>{product.name}</Text>
+        <Text style={styles.productName}>{product.title}</Text>
         <Text style={styles.productPrice}>
           {product.price.toLocaleString("vi-VN")} VND
         </Text>
         <Text style={styles.productDescription}>{product.description}</Text>
-
-        <View style={styles.quantityContainer}>
-          <Ionicons
-            name="remove-circle-outline"
-            size={25}
-            color="black"
-        
-            onPress={decreaseQuantity}
-          />
-          <Text style={styles.quantity}>{quantity}</Text>
-          <Ionicons
-            name="add-circle-outline"
-            size={25}
-            color="black"
-            onPress={increaseQuantity}
-          />
-        </View>
-
-        <Button title="Thêm vào giỏ hàng" onPress={addToCart} color="#ff33ff" />
-      
+        {/* Thêm các thành phần khác nếu cần */}
       </View>
     </ScrollView>
   );
 };
+
 
 // App Component
 export default function App() {
@@ -147,31 +197,40 @@ export default function App() {
       {/* Hiển thị màn hình dựa trên state */}
       {selectedScreen === "Home" && <HomeScreen />}
       {selectedScreen === "Profile" && <ProfileScreen />}
-      {selectedScreen === "Detail" && <Detail />}
-
+      {selectedScreen === "Detail" && <Detail route={undefined} />}
+      {selectedScreen === "CartScreen" && <CartScreen />}
       {/* Thanh Tab đơn giản */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           onPress={() => setSelectedScreen("Home")}
           style={styles.tabItem}
         >
-          <Ionicons name="home-outline" size={25} color="black" />
+          <Ionicons name="home-outline" size={25} color="pink" />
           <Text>Home</Text>
         </TouchableOpacity>
 
+      
         <TouchableOpacity
           onPress={() => setSelectedScreen("Detail")}
           style={styles.tabItem}
         >
-          <Ionicons name="person-outline" size={25} color="black" />
+          <Ionicons name="person-outline" size={25} color="pink" />
           <Text>Sản phẩm</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setSelectedScreen("CartScreen")}
+          style={styles.tabItem}
+        >
+          <Ionicons name="cart-outline" size={25} color="pink" />
+          <Text>Giỏ hàng</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => setSelectedScreen("Profile")}
           style={styles.tabItem}
         >
-          <Ionicons name="person-outline" size={25} color="black" />
+          <Ionicons name="person-outline" size={25} color="pink" />
           <Text>Tôi</Text>
         </TouchableOpacity>
       </View>
@@ -182,15 +241,17 @@ export default function App() {
 // Dummy data
 const categories = [
   // { name: 'Son', image: require('../assets/images/logo.jpg') }, 
-  { name: 'IPHONE', image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro_1.png' },
-  { name: 'SAMSUNG', image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ss-s24-ultra-xam-222.png'},
-  { name: 'OPPO', image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_4__6_73.png' },
+  { name: 'IPHONE'},
+  { name: 'SAMSUNG'},
+  { name: 'OPPO'},
 ];
 
 const products = [
   { name: 'iPhone 16 Pro Max 256GB', price: '65,000,000 VND', image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:0/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max.png' },
   { name: 'iPhone 14 Pro Max 512GB', price: '35,000,000', image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-14-pro-256gb_1.png' },
-  
+  {name: 'Samsung Galaxy S23 Ultra',price: '45,000,000', image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:0/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ss-s23-ultra.png'},
+  {name: 'Samsung Galaxy S23 Ultra',price: '45,000,000', image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:0/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ss-s23-ultra.png'},
+
 ];
 
 // Styles
@@ -253,44 +314,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   productCard: {
-    width: "48%",
+    width: "40%",
     backgroundColor: "#f9f9f9",
-    padding: 10,
+    padding: 20,
     borderRadius: 10,
     alignItems: "center",
   },
-  productImage: {
-    width: 200,
-    height: 200,
-    marginBottom: 25,
-  },
-  productInfo: {
-    padding: 25,
-  },
-  productDescription: {
-    fontSize: 16,
-    color: "#555",
-    marginBottom: 20,
-  },
-  quantityContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 25,
-  },
-  quantity: {
-    fontSize: 20,
-    marginHorizontal: 20,
-  },
-  productName: {
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-  productPrice: {
-    fontSize: 12,
-    color: "#FF0000",
-    marginTop: 5,
-  },
+  
+  
   centeredView: {
     flex: 1,
     justifyContent: "center",
@@ -307,5 +338,95 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     alignItems: "center",
+  },
+  productImage: {
+    width: "100%",
+    height: 100,
+    resizeMode: "cover",
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
+  },
+  productInfo: {
+    padding: 20,
+    backgroundColor: "#fff",
+    marginTop: -1,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+  },
+  productName: {
+    fontSize: 10,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#333",
+  },
+  productPrice: {
+    fontSize: 22,
+    color: "#e74c3c",
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+  productDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: "#500",
+    marginBottom: 20,
+  },
+  quantityContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  quantity: {
+    fontSize: 22,
+    fontWeight: "500",
+    marginHorizontal: 15,
+  },
+  addToCartButton: {
+    backgroundColor: "#ff6347",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 20,
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  userEmail: {
+    fontSize: 18,
+    color: '#777',
+    marginBottom: 15,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '80%',
+    marginTop: 20,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6200ea',
+    padding: 10,
+    borderRadius: 5,
+    width: '45%',
+    justifyContent: 'center',
   },
 });

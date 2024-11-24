@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import Login from './login';
 import SignUp from './signup';
 import Home from './(tabs)/home';
-import Detail from "./(tabs)/detail";
-import CartScreen from "./(tabs)/CartScreen"
+import Detail from "./detail";
+import CartScreen from "./CartScreen"
 export default function TabLayout() {
   const isAuthenticated = false;
 

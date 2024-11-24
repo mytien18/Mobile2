@@ -1,5 +1,5 @@
 // App.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,21 +10,26 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
+import { Link } from "expo-router";
 const Detail = () => {
   const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState(null);
 
-  const product = {
-    id: 1,
-    name: "Son Mistine V6",
-    description:
-      "Màu son mới cho bộ sưu tập thu đông, mang đến sự cuốn hút và thời thượng.",
-    price: 215000,
-    image:
-      "https://img.ltwebstatic.com/images3_spmp/2024/07/11/c4/17206933248c8e9509bf209617d0edc44397ee269b_thumbnail_750x999.webp", 
-  };
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch("https://fakestoreapi.com/products/1");
+        const data = await response.json();
+        setProduct(data); // Cập nhật trạng thái sản phẩm với dữ liệu từ API
+      } catch (error) {
+        console.error("Lỗi khi lấy sản phẩm:", error);
+      }
+    };
+    fetchProduct();
+  }, []);
 
-  const addToCart = () => {
+  const handleAddToCart = () => {
+    console.log("Button pressed!"); // Kiểm tra xem có bị gọi không
     Alert.alert(
       "Đã thêm vào giỏ hàng",
       `Bạn đã thêm ${quantity} sản phẩm vào giỏ hàng.`
@@ -36,11 +41,13 @@ const Detail = () => {
     if (quantity > 1) setQuantity(quantity - 1);
   };
 
+  if (!product) return <Text>Không có sản phẩm nào được chọn.</Text>;
+
   return (
     <ScrollView style={styles.container}>
       <Image source={{ uri: product.image }} style={styles.productImage} />
       <View style={styles.productInfo}>
-        <Text style={styles.productName}>{product.name}</Text>
+        <Text style={styles.productName}>{product.title}</Text>
         <Text style={styles.productPrice}>
           {product.price.toLocaleString("vi-VN")} VND
         </Text>
@@ -56,18 +63,22 @@ const Detail = () => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.addToCartButton} onPress={addToCart}>
-          <Text style={styles.buttonText}>Thêm vào giỏ hàng</Text>
-        </TouchableOpacity>
+        <Link href="./CartScreen">
+          <TouchableOpacity
+            style={styles.addToCartButton}
+            onPress={handleAddToCart}
+          >
+            <Text style={styles.buttonText}>Thêm vào giỏ hàng</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
     </ScrollView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#FFCCCC",
   },
   productImage: {
     width: "100%",
@@ -121,6 +132,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
+    width: "100%",
   },
   buttonText: {
     color: "#fff",

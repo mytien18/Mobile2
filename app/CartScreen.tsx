@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,40 +12,42 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 
 type Product = {
+  title: string;
   id: string;
   name: string;
   price: number;
   image: any;
 };
 
-const Cart = () => {
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: '1',
-      name: "iPhone 16 Pro Max 256GB",
-      price: 65000000,
-      image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:0/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max.png',
-    },
-    {
-      id: '2',
-    name: 'iPhone 14 Pro Max 512GB',
-    price: 35000000,
-    image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-14-pro-256gb_1.png',
-    },
-    {
-      
-        id: '3',
-        name: 'iPhone 15 Plus 128GB',
-        price: 22000000,
-        image: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-15-plus_1_.png',
-    },
-  ]);
+//Gio hang
+const CartScreen = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch("https://fakestoreapi.com/products");
+        const data = await response.json();
+        setProducts(data); // Update the products state
+        // Initialize quantities for each product
+        const initialQuantities = data.reduce((acc: any, product: Product) => {
+          acc[product.id] = 1; // Set default quantity to 1
+          return acc;
+        }, {});
+        setQuantities(initialQuantities);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setError("Failed to fetch products");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const [quantities, setQuantities] = useState<{ [key: string]: number }>({
-    "1": 1,
-    "2": 1,
-    "3": 1,
-  });
+    fetchProducts(); // Call the fetch function when the component is rendered
+  }, []);
 
   const [selectedProducts, setSelectedProducts] = useState<{
     [key: string]: boolean;
@@ -77,6 +79,11 @@ const Cart = () => {
             delete newQuantities[id];
             return newQuantities;
           });
+          setSelectedProducts((prev) => {
+            const newSelectedProducts = { ...prev };
+            delete newSelectedProducts[id];
+            return newSelectedProducts;
+          });
         },
       },
     ]);
@@ -92,50 +99,53 @@ const Cart = () => {
   const getTotalPrice = () => {
     return products.reduce((total, product) => {
       const quantity = quantities[product.id] || 1;
-      return total + product.price * quantity;
+      const isSelected = selectedProducts[product.id];
+      return isSelected ? total + product.price * quantity : total;
     }, 0);
   };
-
-  const renderProductItem = ({ item }: { item: Product }) => (
-    <View style={styles.productCard}>
-      <Image source={item.image} style={styles.productImage} />
-      <View style={styles.productInfo}>
-        <View style={styles.productHeader}>
-          <Text style={styles.productName}>{item.name}</Text>
-          <TouchableOpacity onPress={() => handleRemove(item.id)}>
-            <MaterialIcons name="delete" size={24} color="red" />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.productPrice}>
-          {item.price.toLocaleString()} VND
-        </Text>
-        <View style={styles.quantityContainer}>
-          <TouchableOpacity
-            onPress={() => handleDecrease(item.id)}
-            style={styles.quantityButton}
-          >
-            <Text style={styles.quantityText}>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.quantityText}>{quantities[item.id]}</Text>
-          <TouchableOpacity
-            onPress={() => handleIncrease(item.id)}
-            style={styles.quantityButton}
-          >
-            <Text style={styles.quantityText}>+</Text>
-          </TouchableOpacity>
-        </View>
+const renderProductItem = ({ item }: { item: Product }) => (
+  <View style={styles.productCard}>
+    <Image source={{ uri: item.image }} style={styles.productImage} />
+    <View style={styles.productInfo}>
+      <View style={styles.productHeader}>
+      <Text style={styles.productName}>{item.name || item.title}</Text>
+      {/* Đây là tên sản phẩm */}
+        <TouchableOpacity onPress={() => handleRemove(item.id)}>
+          <MaterialIcons name="delete" size={24} color="red" />
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={() => handleCheckboxChange(item.id)}>
-        <MaterialIcons
-          name={
-            selectedProducts[item.id] ? "check-box" : "check-box-outline-blank"
-          }
-          size={24}
-          color="green"
-        />
-      </TouchableOpacity>
+      <Text style={styles.productPrice}>
+        {item.price.toLocaleString()} VND
+      </Text>
+      <View style={styles.quantityContainer}>
+        <TouchableOpacity
+          onPress={() => handleDecrease(item.id)}
+          style={styles.quantityButton}
+        >
+          <Text style={styles.quantityText}>-</Text>
+        </TouchableOpacity>
+        <Text style={styles.quantityText}>{quantities[item.id]}</Text>
+        <TouchableOpacity
+          onPress={() => handleIncrease(item.id)}
+          style={styles.quantityButton}
+        >
+          <Text style={styles.quantityText}>+</Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  );
+    <TouchableOpacity onPress={() => handleCheckboxChange(item.id)}>
+      <MaterialIcons
+        name={
+          selectedProducts[item.id] ? "check-box" : "check-box-outline-blank"
+        }
+        size={24}
+        color="green"
+      />
+    </TouchableOpacity>
+  </View>
+);
+
+  
 
   return (
     <View style={styles.container}>
@@ -151,7 +161,7 @@ const Cart = () => {
           Tổng tiền: {getTotalPrice().toLocaleString()} VND
         </Text>
         <TouchableOpacity style={styles.orderButton}>
-          <Text style={styles.orderButtonText}>Đặt hàng</Text>
+          <Text style={styles.orderButtonText}>Thanh Toán</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -172,8 +182,8 @@ const styles = StyleSheet.create({
   productCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f0f0",
-    padding: 10,
+    backgroundColor: "#FFCCCC",
+    padding: 25,
     marginBottom: 10,
     borderRadius: 8,
   },
@@ -205,7 +215,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   quantityButton: {
-    backgroundColor: "#ddd",
+    backgroundColor: "#FFCCCC",
     padding: 5,
     borderRadius: 5,
   },
@@ -226,7 +236,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   orderButton: {
-    backgroundColor: "#ff6347",
+    backgroundColor: "#555",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -238,4 +248,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Cart;
+export default CartScreen;
